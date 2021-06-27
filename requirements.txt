@@ -1,0 +1,5 @@
+django~=3.2.4
+matplotlib~=3.3.4
+reportlab~=3.5.67
+svglib~=1.1.0
+pyrebase~=3.0.27
