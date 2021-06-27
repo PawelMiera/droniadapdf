@@ -112,7 +112,7 @@ def create_pdf(map_img, data):
 
     P = Paragraph(
         "<br></br>Celem tego raportu jest udokumentowanie danych misji dostarczonych przez drony do "
-        "Firebase'a.<br></br>", normal)
+        "Firebase'a.<br></br>", small)
     story.append(P)
 
     P = Paragraph("<br></br>1. Mapa wszystkich wykryc:<br></br><br></br><br></br>", bold)
@@ -124,7 +124,7 @@ def create_pdf(map_img, data):
     P = Paragraph("<br></br><br></br>Na mapie zostaly przedstawione wszyskie zlokalizowane choroby jablonek. "
                   "Niebieskie kropki reprezentuja maczniaka jabloni, a czerwone "
                   "parch.<br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br>",
-                  normal)
+                  small)
     story.append(P)
 
     P = Paragraph("<br></br><br></br><br></br>2. Tabela zawieraca wykrycia, ich lokalizacje oraz zdjecia:", bold)
