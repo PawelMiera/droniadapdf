@@ -8,6 +8,9 @@ from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.platypus import *
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 from datetime import datetime
 import pyrebase
 import matplotlib.pyplot as plt
@@ -41,7 +44,6 @@ class FirebaseConnection:
 
 def create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_maczniak):
 
-
     my_map = plt.imread('drzewo.png')
 
     fig, ax = plt.subplots()
@@ -63,7 +65,7 @@ def create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_mac
 
     imgdata = io.BytesIO()
 
-    fig.savefig(imgdata, format='svg')
+    fig.savefig(imgdata, format='svg', bbox_inches='tight')
 
     imgdata.seek(0)
 
@@ -76,6 +78,7 @@ def create_pdf(map_img, data):
 
     story = []
     styles = getSampleStyleSheet()
+
     normal = styles['Normal']
     bold = styles['Heading3']
 
@@ -94,7 +97,7 @@ def create_pdf(map_img, data):
 
     story.append(img)
 
-    P = Paragraph("Misja Drzewo Zycia<br /><br /><br />", styleH)
+    P = Paragraph(u"Misja Drzewo Zycia<br></br><br></br>", styleH)
     story.append(P)
 
     now = datetime.now()
@@ -102,23 +105,29 @@ def create_pdf(map_img, data):
     mytime = now.strftime("%d/%m/%Y o godzinie: %H:%M:%S")
 
     text = "Raport zostal wygenerowany automatycznie przez druzyne AGH Drone Engineering. <br></br>" \
-           "<br></br>Report zostal utworzony dnia: " + mytime + ".<br /><br />"
+           "<br></br>Report zostal utworzony dnia: " + mytime + ".<br></br>"
 
     P = Paragraph(text, small)
     story.append(P)
 
     P = Paragraph(
-        "Celem tego raportu jest udokumentowanie danych misji dostarczonych przez drony do Firebase'a.<br /><br />",
-        normal)
+        "<br></br>Celem tego raportu jest udokumentowanie danych misji dostarczonych przez drony do "
+        "Firebase'a.<br></br>", normal)
     story.append(P)
 
-    P = Paragraph("1. Mapa wszystkich wykryc:", bold)
+    P = Paragraph("<br></br>1. Mapa wszystkich wykryc:<br></br><br></br><br></br>", bold)
     story.append(P)
 
     img = svg2rlg(map_img)
     story.append(img)
 
-    P = Paragraph("<br /><br />2. Tabela zawieraca wykrycia, ich lokalizacje oraz zdjecia:", bold)
+    P = Paragraph("<br></br><br></br>Na mapie zostaly przedstawione wszyskie zlokalizowane choroby jablonek. "
+                  "Niebieskie kropki reprezentuja maczniaka jabloni, a czerwone "
+                  "parch.<br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br><br></br>",
+                  normal)
+    story.append(P)
+
+    P = Paragraph("<br></br><br></br><br></br>2. Tabela zawieraca wykrycia, ich lokalizacje oraz zdjecia:", bold)
     story.append(P)
 
     table_style = TableStyle([('ALIGN', (0, 0), (-1, -0), 'CENTER'),
