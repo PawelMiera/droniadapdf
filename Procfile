@@ -1,1 +1,1 @@
-web:gunicorn droniadapdf.wsgi
+web: gunicorn droniadapdf.wsgi
