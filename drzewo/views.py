@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 
 from svglib.svglib import svg2rlg
 
+import requests
+
 
 class FirebaseConnection:
     def __init__(self):
@@ -31,25 +33,14 @@ class FirebaseConnection:
 
         self.database = self.firebase.database()
 
+        self.storage = self.firebase.storage()
+
     def get_detections(self):
         return self.database.child("circles").child("targets").get().val()
 
 
-def create_map(targets):
-    latitude_parch = []
-    longitude_parch = []
+def create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_maczniak):
 
-    latitude_maczniak = []
-    longitude_maczniak = []
-
-    for target in targets:
-
-        if int(target['color']) == 0:
-            latitude_maczniak.append(target['latitude'])
-            longitude_maczniak.append(target['longitude'])
-        elif int(target['color']) == 1:
-            latitude_parch.append(target['latitude'])
-            longitude_parch.append(target['longitude'])
 
     my_map = plt.imread('drzewo.png')
 
@@ -79,9 +70,7 @@ def create_map(targets):
     return imgdata
 
 
-def create_pdf(map_img):
-
-    data = ["1", "2", "3", "4,", "dsa", "dsaa"]
+def create_pdf(map_img, data):
 
     buffer = io.BytesIO()
 
@@ -129,13 +118,8 @@ def create_pdf(map_img):
     img = svg2rlg(map_img)
     story.append(img)
 
-    P = Paragraph("2. Tabela zawieraca wykrycia, ich lokalizacje oraz zdjecia:", bold)
+    P = Paragraph("<br /><br />2. Tabela zawieraca wykrycia, ich lokalizacje oraz zdjecia:", bold)
     story.append(P)
-
-    # with open(csvPath, "r") as csvfile:
-    #     data = list(csv.reader(csvfile))
-
-    # print(data)
 
     table_style = TableStyle([('ALIGN', (0, 0), (-1, -0), 'CENTER'),
                               ('TEXTCOLOR', (0, 0), (-1, 0), colors.red),
@@ -143,12 +127,6 @@ def create_pdf(map_img):
                               ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
                               ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
                               ])
-    """for i in range(1, len(data)):
-        if str(data[i][4]) != '':
-            I = Image(str(data[i][4]))
-            I.drawHeight = 3 * inch * I.drawHeight / I.drawWidth
-            I.drawWidth = 3 * inch
-            data[i][4] = I"""
 
     t = Table(data, style=table_style)
 
@@ -164,8 +142,47 @@ def create_pdf(map_img):
 def index(request):
     firebaseConnection = FirebaseConnection()
 
-    my_map = create_map(firebaseConnection.get_detections())
-    buffer = create_pdf(my_map)
+    targets = firebaseConnection.get_detections()
 
+    data = [['Description', 'Latitude', 'Longitude', 'State', 'Photo']]
+
+    latitude_parch = []
+    longitude_parch = []
+
+    latitude_maczniak = []
+    longitude_maczniak = []
+
+    for target in targets:
+        if int(target['eliminated']) == 0:
+            state = "Queued"
+        elif int(target['eliminated']) == 0:
+            state = "Eliminated"
+        elif int(target['eliminated']) == 0:
+            state = "Not Eliminated"
+        else:
+            state = "Unknown state"
+
+        url = firebaseConnection.storage.child(target['photo']).get_url(None)
+
+        response = requests.get(url)
+
+        image = Image(io.BytesIO(response.content))
+        image.drawHeight = 5 * cm
+        image.drawWidth = 5 * cm
+
+        row = [target['description'], "%.7f" % float(target['latitude']), "%.7f" % float(target['longitude']), state, image]
+
+        if int(target['color']) == 0:
+            latitude_maczniak.append(target['latitude'])
+            longitude_maczniak.append(target['longitude'])
+        elif int(target['color']) == 1:
+            latitude_parch.append(target['latitude'])
+            longitude_parch.append(target['longitude'])
+
+        data.append(row)
+
+    my_map = create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_maczniak)
+    buffer = create_pdf(my_map, data)
 
     return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Drzewo_Zycia_Raport.pdf')
+
