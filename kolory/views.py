@@ -6,7 +6,7 @@ import haversine as hs
 import numpy as np
 import pyrebase
 import requests
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse, HttpRequest
 from haversine import Unit
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -35,7 +35,7 @@ class FirebaseConnection:
         self.storage = self.firebase.storage()
 
     def get_detections(self, x):
-        return self.database.child("test").child(x).child("detections").get()
+        return self.database.child("drones").child(x).child("detections").get()
 
 
 class PdfCreator:
@@ -104,139 +104,144 @@ class PdfCreator:
         return buffer
 
 
-def index(response):
-    firebaseConnection = FirebaseConnection()
+def index(request):
 
-    x = str(0)
+    if 'id' in request.GET:
 
-    targets = firebaseConnection.get_detections(x)
+        firebaseConnection = FirebaseConnection()
 
-    data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
-    cord = []
+        x = request.GET['id']
 
-    desc = []
-    seen_kap = []
-    seen_praw = []
-    seen_fyt = []
-    all_val = {}
+        targets = firebaseConnection.get_detections(x)
 
-    for target in targets.each():
+        data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
+        cord = []
 
-        desc.append({target.key(): target.val()["description"]})
+        desc = []
+        seen_kap = []
+        seen_praw = []
+        seen_fyt = []
+        all_val = {}
 
-        if target.val()["description"] == "Maczniak prawdziwy":
-            seen_praw.append((target.key(), target.val()["seen_times"]))
-            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-        elif target.val()["description"] == "Maczniak rzekomy kapustowatych":
-            seen_kap.append((target.key(), target.val()["seen_times"]))
-            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-        elif target.val()["description"] == "Fytoftoroza":
-            seen_fyt.append((target.key(), target.val()["seen_times"]))
-            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-        else:
-            pass
+        for target in targets.each():
 
-        all_val[target.key()] = target.val()
-        del target.val()['seen_times']
+            desc.append({target.key(): target.val()["description"]})
 
-    seen_fyt.sort(key=lambda tup: (-tup[1], tup[0]))
-    seen_praw.sort(key=lambda tup: (-tup[1], tup[0]))
-    seen_kap.sort(key=lambda tup: (-tup[1], tup[0]))
+            if target.val()["description"] == "Maczniak prawdziwy":
+                seen_praw.append((target.key(), target.val()["seen_times"]))
+                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+            elif target.val()["description"] == "Maczniak rzekomy kapustowatych":
+                seen_kap.append((target.key(), target.val()["seen_times"]))
+                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+            elif target.val()["description"] == "Fytoftoroza":
+                seen_fyt.append((target.key(), target.val()["seen_times"]))
+                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+            else:
+                pass
 
-    distances = []
-    for i in range(len(cord)):
-        point1 = cord[i][1]
-        for j in range(len(cord)):
-            point2 = cord[j][1]
-            distances.append((cord[i][0], cord[j][0], hs.haversine(point1, point2, unit=Unit.METERS)))
+            all_val[target.key()] = target.val()
+            del target.val()['seen_times']
 
-    distances.sort(key=lambda tup: tup[2])
-    distances = distances[len(cord):]
-    del distances[::2]
+        seen_fyt.sort(key=lambda tup: (-tup[1], tup[0]))
+        seen_praw.sort(key=lambda tup: (-tup[1], tup[0]))
+        seen_kap.sort(key=lambda tup: (-tup[1], tup[0]))
 
-    barszcz = []
-    for i, val in enumerate(distances):
-        if val[2] <= 3:
-            barszcz.append(val[0])
-            barszcz.append(val[1])
+        distances = []
+        for i in range(len(cord)):
+            point1 = cord[i][1]
+            for j in range(len(cord)):
+                point2 = cord[j][1]
+                distances.append((cord[i][0], cord[j][0], hs.haversine(point1, point2, unit=Unit.METERS)))
 
-    barszcz = np.unique(barszcz)
-    lat = 0
-    lon = 0
-    area = 0
+        distances.sort(key=lambda tup: tup[2])
+        distances = distances[len(cord):]
+        del distances[::2]
 
-    if len(barszcz) == 3:
-        for i in barszcz:
-            lat += all_val[i]['latitude']
-            lon += all_val[i]['longitude']
-            area += all_val[i]['area']
-            sample_barszcz = i
-        if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
-            sample_barszcz = i
-            all_val[sample_barszcz]['photo'] = all_val[i]['photo']
+        barszcz = []
+        for i, val in enumerate(distances):
+            if val[2] <= 3:
+                barszcz.append(val[0])
+                barszcz.append(val[1])
 
-        all_val[sample_barszcz]['latitude'] = lat / 3
-        all_val[sample_barszcz]['longitude'] = lon / 3
-        all_val[sample_barszcz]['area'] = area
-        all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
+        barszcz = np.unique(barszcz)
+        lat = 0
+        lon = 0
+        area = 0
 
-        data.append(list(all_val[sample_barszcz].values()))
+        if len(barszcz) == 3:
+            for i in barszcz:
+                lat += all_val[i]['latitude']
+                lon += all_val[i]['longitude']
+                area += all_val[i]['area']
+                sample_barszcz = i
+            if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
+                sample_barszcz = i
+                all_val[sample_barszcz]['photo'] = all_val[i]['photo']
 
-    elif len(barszcz) == 2:
-        for i in barszcz:
-            lat += all_val[i]['latitude']
-            lon += all_val[i]['longitude']
-            area += all_val[i]['area']
-            sample_barszcz = i
-        if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
-            sample_barszcz = i
+            all_val[sample_barszcz]['latitude'] = lat / 3
+            all_val[sample_barszcz]['longitude'] = lon / 3
+            all_val[sample_barszcz]['area'] = area
+            all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
 
-        all_val[sample_barszcz]['latitude'] = lat / 2
-        all_val[sample_barszcz]['longitude'] = lon / 2
-        all_val[sample_barszcz]['area'] = area * 3 / 2
-        all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
+            data.append(list(all_val[sample_barszcz].values()))
 
-        data.append(list(all_val[sample_barszcz].values()))
+        elif len(barszcz) == 2:
+            for i in barszcz:
+                lat += all_val[i]['latitude']
+                lon += all_val[i]['longitude']
+                area += all_val[i]['area']
+                sample_barszcz = i
+            if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
+                sample_barszcz = i
 
-    for i, val in enumerate(seen_praw):
-        if seen_praw[i][0] not in barszcz:
-            data.append(list(all_val[seen_praw[i][0]].values()))
-        if i == 3:
-            break
+            all_val[sample_barszcz]['latitude'] = lat / 2
+            all_val[sample_barszcz]['longitude'] = lon / 2
+            all_val[sample_barszcz]['area'] = area * 3 / 2
+            all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
 
-    for i, val in enumerate(seen_kap):
-        if seen_kap[i][0] not in barszcz:
-            data.append(list(all_val[seen_kap[i][0]].values()))
-        if i == 3:
-            break
+            data.append(list(all_val[sample_barszcz].values()))
 
-    for i, val in enumerate(seen_fyt):
-        if seen_fyt[i][0] not in barszcz:
-            data.append(list(all_val[seen_fyt[i][0]].values()))
-        if i == 3:
-            break
+        for i, val in enumerate(seen_praw):
+            if seen_praw[i][0] not in barszcz:
+                data.append(list(all_val[seen_praw[i][0]].values()))
+            if i == 3:
+                break
 
-    for i, val in enumerate(data[1:]):
-        data[i + 1][0] = "%.2f" % float(data[i + 1][0])
-        data[i + 1][2] = "%.7f" % float(data[i + 1][2])
-        data[i + 1][3] = "%.7f" % float(data[i + 1][3])
+        for i, val in enumerate(seen_kap):
+            if seen_kap[i][0] not in barszcz:
+                data.append(list(all_val[seen_kap[i][0]].values()))
+            if i == 3:
+                break
 
-        url = firebaseConnection.storage.child(data[i + 1][-1]).get_url(None)
+        for i, val in enumerate(seen_fyt):
+            if seen_fyt[i][0] not in barszcz:
+                data.append(list(all_val[seen_fyt[i][0]].values()))
+            if i == 3:
+                break
 
-        response = requests.get(url)
+        for i, val in enumerate(data[1:]):
+            data[i + 1][0] = "%.2f" % float(data[i + 1][0])
+            data[i + 1][2] = "%.7f" % float(data[i + 1][2])
+            data[i + 1][3] = "%.7f" % float(data[i + 1][3])
 
-        image = Image(io.BytesIO(response.content))
+            url = firebaseConnection.storage.child(data[i + 1][-1]).get_url(None)
 
-        image.drawHeight = 5 * cm
-        image.drawWidth = 5 * cm
-        data[i + 1][-1] = image
+            response = requests.get(url)
 
-    buffer = PdfCreator.createPdf(data, x)
-    return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Rapor3 t.pdf')
+            image = Image(io.BytesIO(response.content))
 
+            image.drawHeight = 5 * cm
+            image.drawWidth = 5 * cm
+            data[i + 1][-1] = image
 
+        buffer = PdfCreator.createPdf(data, x)
+        return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Rapor3 t.pdf')
 
-index(None)
+    else:
+        message = 'Some error occurred!'
+
+        return HttpResponse(message)
+
 
 
 """def index(request):
