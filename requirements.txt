@@ -5,3 +5,4 @@ svglib~=1.1.0
 pyrebase~=3.0.27
 whitenoise~=5.2.0
 gunicorn~=20.1.0
+haversine~=2.3.1
