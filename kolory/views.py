@@ -76,7 +76,7 @@ class PdfCreator:
         P = Paragraph(text, small)
         story.append(P)
 
-        drone_nr = "<br />Raport zostal wygenerowany dla drona nr: " + x + ".<br></br>"
+        drone_nr = "<br />Raport zostal wygenerowany dla drona nr: " + str(x) + ".<br></br>"
         P = Paragraph(drone_nr, small)
         story.append(P)
 
@@ -117,30 +117,32 @@ def index(request):
         data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
         cord = []
 
-        desc = []
         seen_kap = []
         seen_praw = []
         seen_fyt = []
+        seen_inna = []
         all_val = {}
 
         for target in targets.each():
 
-            desc.append({target.key(): target.val()["description"]})
+            #desc.append({target.key(): target.val()["description"]})
+            if target.val() is not None:
+                if target.val()["description"] == "Maczniak prawdziwy":
+                    seen_praw.append((target.key(), target.val()["seen_times"]))
+                    cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+                elif target.val()["description"] == "Maczniak rzekomy kapustowatych":
+                    seen_kap.append((target.key(), target.val()["seen_times"]))
+                    cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+                elif target.val()["description"] == "Fytoftoroza":
+                    seen_fyt.append((target.key(), target.val()["seen_times"]))
+                    cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+                elif target.val()["description"] == "Inna choroba":
+                    seen_inna.append((target.key(), target.val()["seen_times"]))
+                else:
+                    pass
 
-            if target.val()["description"] == "Maczniak prawdziwy":
-                seen_praw.append((target.key(), target.val()["seen_times"]))
-                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-            elif target.val()["description"] == "Maczniak rzekomy kapustowatych":
-                seen_kap.append((target.key(), target.val()["seen_times"]))
-                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-            elif target.val()["description"] == "Fytoftoroza":
-                seen_fyt.append((target.key(), target.val()["seen_times"]))
-                cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-            else:
-                pass
-
-            all_val[target.key()] = target.val()
-            del target.val()['seen_times']
+                all_val[target.key()] = target.val()
+                del target.val()['seen_times']
 
         seen_fyt.sort(key=lambda tup: (-tup[1], tup[0]))
         seen_praw.sort(key=lambda tup: (-tup[1], tup[0]))
@@ -159,7 +161,7 @@ def index(request):
 
         barszcz = []
         for i, val in enumerate(distances):
-            if val[2] <= 3:
+            if val[2] <= 6:
                 barszcz.append(val[0])
                 barszcz.append(val[1])
 
@@ -201,22 +203,36 @@ def index(request):
 
             data.append(list(all_val[sample_barszcz].values()))
 
+        count = 0
+
         for i, val in enumerate(seen_praw):
             if seen_praw[i][0] not in barszcz:
                 data.append(list(all_val[seen_praw[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
                 break
+
+        count = 0
 
         for i, val in enumerate(seen_kap):
             if seen_kap[i][0] not in barszcz:
                 data.append(list(all_val[seen_kap[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
                 break
+
+        count = 0
 
         for i, val in enumerate(seen_fyt):
             if seen_fyt[i][0] not in barszcz:
                 data.append(list(all_val[seen_fyt[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
+                break
+
+        for i, val in enumerate(seen_inna):
+            data.append(list(all_val[seen_inna[i][0]].values()))
+            if i == 9:
                 break
 
         for i, val in enumerate(data[1:]):
@@ -234,8 +250,13 @@ def index(request):
             image.drawWidth = 5 * cm
             data[i + 1][-1] = image
 
-        buffer = PdfCreator.createPdf(data, x)
-        return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Rapor3 t.pdf')
+        data2 = []
+        for d in data:
+            new_d = [d[1], d[2], d[3], d[0], d[4]]
+            data2.append(new_d)
+
+        buffer = PdfCreator.createPdf(data2, x)
+        return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Raport.pdf')
 
     else:
         message = 'Some error occurred!'
@@ -243,6 +264,150 @@ def index(request):
         return HttpResponse(message)
 
 
+#index(None)
+
+"""def index2(request):
+
+    firebaseConnection = FirebaseConnection()
+
+    targets = firebaseConnection.get_detections(0)
+
+    data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
+    cord = []
+
+    desc = []
+    seen_kap = []
+    seen_praw = []
+    seen_fyt = []
+    seen_inna = []
+    all_val = {}
+
+    for target in targets.each():
+
+        desc.append({target.key(): target.val()["description"]})
+
+        if target.val()["description"] == "Maczniak prawdziwy":
+            seen_praw.append((target.key(), target.val()["seen_times"]))
+            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+        elif target.val()["description"] == "Maczniak rzekomy kapustowatych":
+            seen_kap.append((target.key(), target.val()["seen_times"]))
+            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+        elif target.val()["description"] == "Fytoftoroza":
+            seen_fyt.append((target.key(), target.val()["seen_times"]))
+            cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+
+        elif target.val()["description"] == "Inna choroba":
+            seen_inna.append((target.key(), target.val()["seen_times"]))
+        else:
+            pass
+
+        all_val[target.key()] = target.val()
+        del target.val()['seen_times']
+
+    seen_fyt.sort(key=lambda tup: (-tup[1], tup[0]))
+    seen_praw.sort(key=lambda tup: (-tup[1], tup[0]))
+    seen_kap.sort(key=lambda tup: (-tup[1], tup[0]))
+    seen_inna.sort(key=lambda tup: (-tup[1], tup[0]))
+
+    distances = []
+    for i in range(len(cord)):
+        point1 = cord[i][1]
+        for j in range(len(cord)):
+            point2 = cord[j][1]
+            distances.append((cord[i][0], cord[j][0], hs.haversine(point1, point2, unit=Unit.METERS)))
+
+    distances.sort(key=lambda tup: tup[2])
+    distances = distances[len(cord):]
+    del distances[::2]
+
+    barszcz = []
+    for i, val in enumerate(distances):
+        if val[2] <= 3:
+            barszcz.append(val[0])
+            barszcz.append(val[1])
+
+    barszcz = np.unique(barszcz)
+    lat = 0
+    lon = 0
+    area = 0
+
+    if len(barszcz) == 3:
+        for i in barszcz:
+            lat += all_val[i]['latitude']
+            lon += all_val[i]['longitude']
+            area += all_val[i]['area']
+            sample_barszcz = i
+        if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
+            sample_barszcz = i
+            all_val[sample_barszcz]['photo'] = all_val[i]['photo']
+
+        all_val[sample_barszcz]['latitude'] = lat / 3
+        all_val[sample_barszcz]['longitude'] = lon / 3
+        all_val[sample_barszcz]['area'] = area
+        all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
+
+        data.append(list(all_val[sample_barszcz].values()))
+
+    elif len(barszcz) == 2:
+        for i in barszcz:
+            lat += all_val[i]['latitude']
+            lon += all_val[i]['longitude']
+            area += all_val[i]['area']
+            sample_barszcz = i
+        if all_val[i]['description'] == 'Maczniak rzekomy kapustowatych':
+            sample_barszcz = i
+
+        all_val[sample_barszcz]['latitude'] = lat / 2
+        all_val[sample_barszcz]['longitude'] = lon / 2
+        all_val[sample_barszcz]['area'] = area * 3 / 2
+        all_val[sample_barszcz]['description'] = 'Barszcz sosnowskiego'
+
+        data.append(list(all_val[sample_barszcz].values()))
+
+    for i, val in enumerate(seen_praw):
+        if seen_praw[i][0] not in barszcz:
+            data.append(list(all_val[seen_praw[i][0]].values()))
+        if i == 3:
+            break
+
+    for i, val in enumerate(seen_kap):
+        if seen_kap[i][0] not in barszcz:
+            data.append(list(all_val[seen_kap[i][0]].values()))
+        if i == 3:
+            break
+
+    for i, val in enumerate(seen_fyt):
+        if seen_fyt[i][0] not in barszcz:
+            data.append(list(all_val[seen_fyt[i][0]].values()))
+        if i == 3:
+            break
+
+    for i, val in enumerate(seen_inna):
+
+        data.append(list(all_val[seen_inna[i][0]].values()))
+        if i == 9:
+            break
+
+    for i, val in enumerate(data[1:]):
+        data[i + 1][0] = "%.2f" % float(data[i + 1][0])
+        data[i + 1][2] = "%.7f" % float(data[i + 1][2])
+        data[i + 1][3] = "%.7f" % float(data[i + 1][3])
+
+        url = firebaseConnection.storage.child(data[i + 1][-1]).get_url(None)
+
+        response = requests.get(url)
+
+        image = Image(io.BytesIO(response.content))
+
+        image.drawHeight = 5 * cm
+        image.drawWidth = 5 * cm
+        data[i + 1][-1] = image
+
+    buffer = PdfCreator.createPdf(data, 0)
+    return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Raport.pdf')"""
+
+
+#index2(None)
 
 """def index(request):
 
