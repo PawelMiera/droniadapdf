@@ -114,7 +114,7 @@ def index(request):
 
         targets = firebaseConnection.get_detections(x)
 
-        data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
+        data = [['Description', 'Latitude', 'Longitude', 'Area', 'Photo']]
         cord = []
 
         desc = []
@@ -159,7 +159,7 @@ def index(request):
 
         barszcz = []
         for i, val in enumerate(distances):
-            if val[2] <= 3:
+            if val[2] <= 5:
                 barszcz.append(val[0])
                 barszcz.append(val[1])
 
@@ -218,11 +218,12 @@ def index(request):
                 data.append(list(all_val[seen_fyt[i][0]].values()))
             if i == 3:
                 break
-
+        order = [1,2,3,0,4]
         for i, val in enumerate(data[1:]):
-            data[i + 1][0] = "%.2f" % float(data[i + 1][0])
+            data[i+1] = [data[i+1][j] for j in order]
+            data[i + 1][1] = "%.7f" % float(data[i + 1][1])
             data[i + 1][2] = "%.7f" % float(data[i + 1][2])
-            data[i + 1][3] = "%.7f" % float(data[i + 1][3])
+            data[i + 1][3] = "%.2f" % float(data[i + 1][3])
 
             url = firebaseConnection.storage.child(data[i + 1][-1]).get_url(None)
 
@@ -245,23 +246,15 @@ def index(request):
 
 
 """def index(request):
-
     if 'id' in request.GET:
         message = 'You submitted: %r' % request.GET['id']
     else:
         message = 'You submitted nothing!'
-
     return HttpResponse(message)
     buffer = io.BytesIO()
-
     p = canvas.Canvas(buffer)
-
-
     p.drawString(100, 100, "Hello world.")
-
     p.showPage()
     p.save()
-
-
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Raport.pdf')"""
