@@ -136,8 +136,6 @@ def index(request):
             elif target.val()["description"] == "Fytoftoroza":
                 seen_fyt.append((target.key(), target.val()["seen_times"]))
                 cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
-            elif target.val()["description"] == "Inna choroba":
-                seen_inna.append((target.key(), target.val()["seen_times"]))
             else:
                 pass
 
@@ -228,12 +226,6 @@ def index(request):
                 data.append(list(all_val[seen_fyt[i][0]].values()))
                 count += 1
             if count == 3:
-                break
-
-        for i, val in enumerate(seen_inna):
-
-            data.append(list(all_val[seen_inna[i][0]].values()))
-            if i == 9:
                 break
 
         order = [1, 2, 3, 0, 4]
