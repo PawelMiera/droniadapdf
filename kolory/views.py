@@ -35,7 +35,7 @@ class FirebaseConnection:
         self.storage = self.firebase.storage()
 
     def get_detections(self, x):
-        return self.database.child("drones").child(x).child("detections").get()
+        return self.database.child("test").child(x).child("detections").get()
 
 
 class PdfCreator:
@@ -114,13 +114,14 @@ def index(request):
 
         targets = firebaseConnection.get_detections(x)
 
-        data = [['Description', 'Latitude', 'Longitude', 'Area', 'Photo']]
+        data = [['Area', 'Description', 'Latitude', 'Longitude', 'Photo']]
         cord = []
 
         desc = []
         seen_kap = []
         seen_praw = []
         seen_fyt = []
+        seen_inna = []
         all_val = {}
 
         for target in targets.each():
@@ -136,6 +137,8 @@ def index(request):
             elif target.val()["description"] == "Fytoftoroza":
                 seen_fyt.append((target.key(), target.val()["seen_times"]))
                 cord.append((target.key(), (target.val()["latitude"], target.val()["longitude"])))
+            elif target.val()["description"] == "Inna choroba":
+                seen_inna.append((target.key(), target.val()["seen_times"]))
             else:
                 pass
 
@@ -145,6 +148,7 @@ def index(request):
         seen_fyt.sort(key=lambda tup: (-tup[1], tup[0]))
         seen_praw.sort(key=lambda tup: (-tup[1], tup[0]))
         seen_kap.sort(key=lambda tup: (-tup[1], tup[0]))
+        seen_inna.sort(key=lambda tup: (-tup[1], tup[0]))
 
         distances = []
         for i in range(len(cord)):
@@ -159,7 +163,7 @@ def index(request):
 
         barszcz = []
         for i, val in enumerate(distances):
-            if val[2] <= 5:
+            if val[2] <= 3:
                 barszcz.append(val[0])
                 barszcz.append(val[1])
 
@@ -201,29 +205,44 @@ def index(request):
 
             data.append(list(all_val[sample_barszcz].values()))
 
+
+        count = 0
+
         for i, val in enumerate(seen_praw):
             if seen_praw[i][0] not in barszcz:
                 data.append(list(all_val[seen_praw[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
                 break
+
+        count = 0
 
         for i, val in enumerate(seen_kap):
             if seen_kap[i][0] not in barszcz:
                 data.append(list(all_val[seen_kap[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
                 break
+
+        count = 0
 
         for i, val in enumerate(seen_fyt):
             if seen_fyt[i][0] not in barszcz:
                 data.append(list(all_val[seen_fyt[i][0]].values()))
-            if i == 3:
+                count += 1
+            if count == 3:
                 break
-        order = [1,2,3,0,4]
+
+        for i, val in enumerate(seen_inna):
+
+            data.append(list(all_val[seen_inna[i][0]].values()))
+            if i == 9:
+                break
+
         for i, val in enumerate(data[1:]):
-            data[i+1] = [data[i+1][j] for j in order]
-            data[i + 1][1] = "%.7f" % float(data[i + 1][1])
+            data[i + 1][0] = "%.2f" % float(data[i + 1][0])
             data[i + 1][2] = "%.7f" % float(data[i + 1][2])
-            data[i + 1][3] = "%.2f" % float(data[i + 1][3])
+            data[i + 1][3] = "%.7f" % float(data[i + 1][3])
 
             url = firebaseConnection.storage.child(data[i + 1][-1]).get_url(None)
 
@@ -246,15 +265,23 @@ def index(request):
 
 
 """def index(request):
+
     if 'id' in request.GET:
         message = 'You submitted: %r' % request.GET['id']
     else:
         message = 'You submitted nothing!'
+
     return HttpResponse(message)
     buffer = io.BytesIO()
+
     p = canvas.Canvas(buffer)
+
+
     p.drawString(100, 100, "Hello world.")
+
     p.showPage()
     p.save()
+
+
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Trzy_Kolory_Raport.pdf')"""
