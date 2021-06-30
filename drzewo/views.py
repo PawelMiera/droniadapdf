@@ -161,37 +161,52 @@ def index(request):
     latitude_maczniak = []
     longitude_maczniak = []
 
+    target_values = []
+
     for target in targets:
-        if int(target['eliminated']) == 0:
-            state = "Queued"
-        elif int(target['eliminated']) == 0:
-            state = "Eliminated"
-        elif int(target['eliminated']) == 0:
-            state = "Not Eliminated"
-        else:
-            state = "Unknown state"
+        if target is not None:
 
-        url = firebaseConnection.storage.child(target['photo']).get_url(None)
+            if int(target['eliminated']) == 0:
+                state = "Queued"
+            elif int(target['eliminated']) == 1:
+                state = "Eliminated"
+            elif int(target['eliminated']) == 2:
+                state = "Not Eliminated"
+            else:
+                state = "Unknown state"
 
-        response = requests.get(url)
+            url = firebaseConnection.storage.child(target['photo']).get_url(None)
 
-        image = Image(io.BytesIO(response.content))
-        image.drawHeight = 5 * cm
-        image.drawWidth = 5 * cm
+            response = requests.get(url)
 
-        row = [target['description'], "%.7f" % float(target['latitude']), "%.7f" % float(target['longitude']), state, image]
+            image = Image(io.BytesIO(response.content))
+            image.drawHeight = 5 * cm
+            image.drawWidth = 5 * cm
 
-        if int(target['color']) == 0:
-            latitude_maczniak.append(target['latitude'])
-            longitude_maczniak.append(target['longitude'])
-        elif int(target['color']) == 1:
-            latitude_parch.append(target['latitude'])
-            longitude_parch.append(target['longitude'])
+            row = [target['description'], "%.7f" % float(target['latitude']), "%.7f" % float(target['longitude']),
+                   state, image, target['color'], target['seen_times']]
 
-        data.append(row)
+            target_values.append(row)
+
+    target_values.sort(key=lambda tup: -tup[-1])
+
+    for i, target_value in enumerate(target_values):
+        data.append(target_value[:-2])
+
+        if int(target_value[-2]) == 0:
+            latitude_maczniak.append(float(target_value[1]))
+            longitude_maczniak.append(float(target_value[2]))
+        elif int(target_value[-2]) == 1:
+            latitude_parch.append(float(target_value[1]))
+            longitude_parch.append(float(target_value[2]))
+
+        if i == 9:
+            break
 
     my_map = create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_maczniak)
     buffer = create_pdf(my_map, data)
 
     return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Drzewo_Zycia_Raport.pdf')
 
+
+#index(None)
