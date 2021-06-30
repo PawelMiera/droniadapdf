@@ -184,7 +184,7 @@ def index(request):
             image.drawWidth = 5 * cm
 
             row = [target['description'], "%.7f" % float(target['latitude']), "%.7f" % float(target['longitude']),
-                   state, image, target['color'], target['seen_times']]
+                   state, image, int(target['color']), int(target['seen_times'])]
 
             target_values.append(row)
 
