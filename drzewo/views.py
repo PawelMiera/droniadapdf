@@ -11,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from datetime import datetime
+import datetime
 import pyrebase
 import matplotlib.pyplot as plt
 
@@ -43,7 +43,6 @@ class FirebaseConnection:
 
 
 def create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_maczniak):
-
     my_map = plt.imread('drzewo.png')
 
     fig, ax = plt.subplots()
@@ -73,7 +72,6 @@ def create_map(latitude_parch, longitude_parch, latitude_maczniak, longitude_mac
 
 
 def create_pdf(map_img, data):
-
     buffer = io.BytesIO()
 
     story = []
@@ -100,7 +98,11 @@ def create_pdf(map_img, data):
     P = Paragraph(u"Misja Drzewo Zycia<br></br><br></br>", styleH)
     story.append(P)
 
-    now = datetime.now()
+    now = datetime.datetime.now()
+
+    hours_added = datetime.timedelta(hours=2)
+
+    now += hours_added
 
     mytime = now.strftime("%d/%m/%Y o godzinie: %H:%M:%S")
 
@@ -153,7 +155,7 @@ def index(request):
 
     targets = firebaseConnection.get_detections()
 
-    data = [['Description', 'Latitude', 'Longitude', 'State', 'Photo']]
+    data = [['Description', 'Latitude', 'Longitude', 'Photo']]
 
     latitude_parch = []
     longitude_parch = []
@@ -184,7 +186,7 @@ def index(request):
             image.drawWidth = 5 * cm
 
             row = [target['description'], "%.7f" % float(target['latitude']), "%.7f" % float(target['longitude']),
-                   state, image, int(target['color']), int(target['seen_times'])]
+                   image, int(target['color']), int(target['seen_times'])]
 
             target_values.append(row)
 
@@ -208,5 +210,4 @@ def index(request):
 
     return FileResponse(buffer, as_attachment=True, filename='AGH_Drone_Engineering_Drzewo_Zycia_Raport.pdf')
 
-
-#index(None)
+# index(None)
